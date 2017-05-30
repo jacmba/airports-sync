@@ -20,5 +20,12 @@
   "bugs": {
     "url": "https://github.com/jacmba/airports-sync/issues"
   },
-  "homepage": "https://github.com/jacmba/airports-sync#readme"
+  "homepage": "https://github.com/jacmba/airports-sync#readme",
+  "devDependencies": {
+    "assert": "1.4.1",
+    "mocha": "3.4.2"
+  },
+  "dependencies": {
+    "mongo": "0.1.0"
+  }
 }
