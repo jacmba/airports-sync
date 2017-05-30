@@ -1,0 +1,32 @@
+{
+  "name": "airports-sync",
+  "version": "1.0.0",
+  "description": "Airports database importer",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "mocha test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jacmba/airports-sync.git"
+  },
+  "keywords": [
+    "airport",
+    "database",
+    "runway"
+  ],
+  "author": "Jacinto Mba <jacmba@gmail.com>",
+  "license": "WTFPL",
+  "bugs": {
+    "url": "https://github.com/jacmba/airports-sync/issues"
+  },
+  "homepage": "https://github.com/jacmba/airports-sync#readme",
+  "devDependencies": {
+    "assert": "1.4.1",
+    "mocha": "3.4.2"
+  },
+  "dependencies": {
+    "mongo": "0.1.0"
+  }
+}
