@@ -1,5 +1,10 @@
 'use strict';
 
+const FEET = 0.3048;
+
+let ReadLine = require('readline');
+let fs = require('fs');
+
 /**
  * Airport model class
  */
@@ -46,8 +51,26 @@ class Airport {
       this.lon = Number(info[4]);
       this.elevation = Number(info[5]);
       this.ta = Number(info[6]);
+    } else if(info[0] === 'R') {
+      console.log('Parsing runway info');
+      let rwy = {
+        name: info[1],
+        hdg: Number(info[2]),
+        length: Math.floor(Number(info[3]) * FEET),
+        width: Math.floor(Number(info[4]) * FEET),
+        ils: info[5] === '1' ? info[6] : null,
+        lat: Number(info[8]),
+        lon: Number(info[9]),
+        elevation: 1985
+      };
+
+      this.runways.push(rwy);
+    } else {
+      console.error('Unknown data');
     }
   }
+
+  //----------------------------------------------------------------------------
 }
 
 module.exports = Airport;
