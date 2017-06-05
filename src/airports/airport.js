@@ -2,9 +2,6 @@
 
 const FEET = 0.3048;
 
-let ReadLine = require('readline');
-let fs = require('fs');
-
 /**
  * Airport model class
  */
@@ -13,9 +10,8 @@ class Airport {
   /**
    * @constructor
    */
-  constructor(db, file) {
+  constructor(db) {
     this.db = db;
-    this.file = file;
 
     this.clear();
   }
@@ -61,7 +57,7 @@ class Airport {
         ils: info[5] === '1' ? info[6] : null,
         lat: Number(info[8]),
         lon: Number(info[9]),
-        elevation: 1985
+        elevation: Number(info[10])
       };
 
       this.runways.push(rwy);
