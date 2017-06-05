@@ -1,6 +1,9 @@
 'use strict';
 
 const FEET = 0.3048;
+const COLLECTION = 'airports';
+
+let _ = require('lodash');
 
 /**
  * Airport model class
@@ -14,6 +17,21 @@ class Airport {
     this.db = db;
 
     this.clear();
+  }
+
+  //----------------------------------------------------------------------------
+  indexize() {
+    return new Promise((resolve, reject) => {
+      this.db.
+      createIndex(COLLECTION, {icao: 1}, {name: "ICAOIndex", unique: true})
+      .then(() => {
+        console.log('Name index created');
+        resolve();
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
   }
 
   //----------------------------------------------------------------------------
@@ -62,11 +80,29 @@ class Airport {
 
       this.runways.push(rwy);
     } else {
-      console.error('Unknown data');
+      console.error(`Unknown data "${data}"`);
     }
   }
 
   //----------------------------------------------------------------------------
+  save() {
+    let obj = _.toPlainObject(this);
+    delete obj.db;
+    console.log(`Saving ${JSON.stringify(obj.icao)}`);
+    this.db.collection(COLLECTION).updateOne({
+      icao: obj.icao
+    }, {
+      $set: obj
+    }, {
+      upsert: true
+    })
+    .then(() => {
+      console.log(`Airport ${obj.icao} saved`);
+    })
+    .catch(err => {
+      console.error(`Error saving airport ${obj.icao}: ${err}`);
+    });
+  }
 }
 
 module.exports = Airport;

@@ -27,6 +27,7 @@
     "mocha": "3.4.2"
   },
   "dependencies": {
-    "mongo": "0.1.0"
+    "lodash": "4.17.4",
+    "mongodb": "2.2.28"
   }
 }
