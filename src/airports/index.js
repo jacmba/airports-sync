@@ -43,14 +43,29 @@ function AirportIndex () {
     },
 
     //--------------------------------------------------------------------------
+    tearDown() {
+      model.destroy();
+    },
+
+    //--------------------------------------------------------------------------
     parseFile() {
-      readline.on('line', line => {
-        if(line.length === 0) {
-          model.save();
-          model.clear();
-        } else {
-          model.parse(line);
-        }
+      return new Promise((resolve, reject) => {
+        readline.on('line', line => {
+          if(line.length === 0) {
+            model.save();
+            model.clear();
+          } else {
+            try {
+              model.parse(line);
+            } catch (e) {
+              return reject(e);
+            }
+          }
+        });
+
+        readline.on('close', () => {
+          resolve();
+        });
       });
     }
   };
