@@ -1,0 +1,35 @@
+sudo: required
+
+services:
+  - docker
+
+language: node_js
+
+node_js:
+  "8"
+
+before_script:
+  - npm install -g mocha
+
+before_install:
+  - npm install
+
+branches:
+  only:
+  - develop
+  - master
+
+after_success:
+- if [ "$TRAVIS_BRANCH" == "develop" ]; then
+  docker build -t "$DOCKER_IMAGE":dev .;
+  docker login -u="$DOCKER_USER" -p="$DOCKER_PASS";
+  docker push "$DOCKER_IMAGE":dev;
+  fi
+- node scripts/checkTag.js "$TRAVIS_TAG"
+- export BUILD_TAG=$(cat BUILD_TAG)
+- rm BUILD_TAG
+- if [ "$TRAVIS_BRANCH" == "master" ]; then
+  docker build -t "$DOCKER_IMAGE":"$BUILD_TAG" .;
+  docker login -u="$DOCKER_USER" -p="$DOCKER_PASS";
+  docker push "$DOCKER_IMAGE":"$BUILD_TAG";
+  fi
