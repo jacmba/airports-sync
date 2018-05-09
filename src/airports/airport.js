@@ -10,7 +10,7 @@ const FEET = 0.3048 // 1 feet = 0.3048 meters
 const COLLECTION = 'airports' // Target database collection
 
 const _ = require('lodash')
-const fp = require('highland')
+const { compose } = require('highland')
 
 /**
  * Create database indexes
@@ -75,7 +75,7 @@ const process = ([airport, ...runways]) => parseAirport(
  * This is the root of the transform breadcrum
  * @param {string} x - Raw text file input data
  */
-const parse = x => fp.compose(processBlocks, splitBlocks)(x)
+const parse = x => compose(processBlocks, splitBlocks)(x)
 
 /**
  * Convert text data into information arrays per airport
