@@ -1,43 +1,24 @@
-'use strict';
+'use strict'
 
-const FEET = 0.3048;
-const COLLECTION = 'airports';
+const FEET = 0.3048
+const COLLECTION = 'airports'
 
-let _ = require('lodash');
+let _ = require('lodash')
 
 /**
- * Airport model class
+ * Airport model functions
  */
-class Airport {
-  //----------------------------------------------------------------------------
-  /**
-   * @constructor
-   */
-  constructor(db) {
-    this.db = db;
-
-    this.clear();
-  }
+module.exports = {
 
   //----------------------------------------------------------------------------
-  destroy() {
-    this.db.close();
-  }
-
-  //----------------------------------------------------------------------------
-  indexize() {
-    return new Promise((resolve, reject) => {
-      this.db.
-      createIndex(COLLECTION, {icao: 1}, {name: "ICAOIndex", unique: true})
-      .then(() => {
-        console.log('Name index created');
-        resolve();
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
-  }
+  async indexize(db) {
+    try {
+      await db.createIndex(COLLECTION, {icao: 1}, {name: "ICAOIndex", unique: true})
+      console.log('Name index created');
+    } catch (e) {
+      throw e
+    }
+  },
 
   //----------------------------------------------------------------------------
   /**
@@ -51,7 +32,7 @@ class Airport {
     this.elevation = 0;
     this.ta = 0;
     this.runways = [];
-  }
+  },
 
   //----------------------------------------------------------------------------
   /**
@@ -59,55 +40,52 @@ class Airport {
    * @param {string} data - Input raw airport or runway data
    */
   parse(data) {
-    let info = data.split(',');
+    const parseAirport = ([icao, name, lat, lon, elev, ta]) => Object.freeze({
+      icao: icao,
+      name: name,
+      lat: Number(lat),
+      lon: Number(lon),
+      elevation: Number(elev),
+      ta: Number(ta)
+    })
 
-    // Airport info
-    if(info[0] === 'A') {
-      console.log('Parsing airport info');
-      this.icao = info[1];
-      this.name = info[2];
-      this.lat = Number(info[3]);
-      this.lon = Number(info[4]);
-      this.elevation = Number(info[5]);
-      this.ta = Number(info[6]);
-    } else if(info[0] === 'R') {
-      console.log('Parsing runway info');
-      let rwy = {
-        name: info[1],
-        hdg: Number(info[2]),
-        length: Math.floor(Number(info[3]) * FEET),
-        width: Math.floor(Number(info[4]) * FEET),
-        ils: info[5] === '1' ? info[6] : null,
-        lat: Number(info[8]),
-        lon: Number(info[9]),
-        elevation: Number(info[10])
-      };
+    const parseRunway = ([name, hdg, len, wid, hasIls, ils, unused, lat, lon, elev]) => Object.freeze({
+      name: name,
+      hdg: Number(hdg),
+      length: getMeters(len),
+      width: getMeters(wid),
+      ils: hasIls === 1 ? ils : null,
+      lat: Number(lat),
+      lon: Number(lon),
+      elevation: Number(elev)
+    })
 
-      this.runways.push(rwy);
-    } else {
-      console.error(`Unknown data "${data}"`);
+    const getMeters = x => Math.floor(Number(x) * FEET)
+
+    const process = ([type, ...body]) => {
+      if(type === 'A') return parseAirport(body)
+      else if (type === 'R') return parseRunway(body)
+      else console.error(`Unknown data type "${type}"`); return {}
     }
-  }
+
+    return process(data.split(','))
+  },
 
   //----------------------------------------------------------------------------
-  save() {
-    let obj = _.toPlainObject(this);
-    delete obj.db;
-    console.log(`Saving ${JSON.stringify(obj.icao)}`);
-    this.db.collection(COLLECTION).updateOne({
-      icao: obj.icao
-    }, {
-      $set: obj
-    }, {
-      upsert: true
-    })
-    .then(() => {
-      console.log(`Airport ${obj.icao} saved`);
-    })
-    .catch(err => {
-      console.error(`Error saving airport ${obj.icao}: ${err}`);
-    });
+  async save(db, data) {
+    console.log(`Saving ${JSON.stringify(data.icao)}`);
+
+    try {
+      await this.db.collection(COLLECTION).updateOne({
+        icao: data.icao
+      }, {
+        $set: data
+      }, {
+        upsert: true
+      })
+      console.log(`Airport ${data.icao} saved`)
+    } catch (e) {
+      console.error(`Error saving airport ${data.icao}: ${e}`)
+    }
   }
 }
-
-module.exports = Airport;
