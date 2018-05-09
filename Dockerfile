@@ -1,4 +1,4 @@
-from node:8-alpine
+FROM node:8-alpine
 
 # Create app dir
 RUN mkdir -p /usr/app
