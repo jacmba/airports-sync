@@ -1,74 +1,37 @@
-'use strict';
+'use strict'
 
-const FILEPATH = __dirname + '/../../data/airports.txt';
-const DB_URI = `mongodb://mongo:${process.env.DB_PORT || 27017}/airports`;
+const FILEPATH = __dirname + '/../../data/airports.txt'
+const DB_URI = `mongodb://mongo:${process.env.DB_PORT || 27017}/airports`
 
-let Airport = require('./airport');
-let fs = require('fs');
-let ReadLine = require('readline');
-let Mongo = require('mongodb');
+const model = require('./airport')
+const fs = require('fs')
+const { compose } = require('highland')
+const Mongo = require('mongodb')
 
-function AirportIndex () {
-  let readline;
-  let model;
+module.exports = {
 
-  return {
-    //--------------------------------------------------------------------------
-    init() {
-      return new Promise((resolve, reject) => {
-        try {
-          readline = ReadLine.createInterface({
-            input: fs.createReadStream(FILEPATH)
-          });
+  init() {
+    return new Promise((resolve, reject) => {
 
-          Mongo.MongoClient.connect(DB_URI, (err, db) => {
-            if(err) {
-              return reject(err);
-            }
-            model = new Airport(db);
-
-            model.indexize()
-            .then(() => {
-              console.log('Indexes creation completed');
-              resolve();
-            })
-            .catch(err => {
-              return reject(err);
-            });
-          });
-        } catch(e) {
-          return reject(e);
+      Mongo.MongoClient.connect(DB_URI, (err, db) => {
+        if(err) {
+          return reject(err)
         }
-      });
-    },
 
-    //--------------------------------------------------------------------------
-    tearDown() {
-      model.destroy();
-    },
+        model.indexize(db)
+        .then(() => {
+          console.log('Indexes creation completed')
+          resolve(db)
+        })
+        .catch(err => {
+          return reject(err)
+        })
+      })
+    })
+  },
 
-    //--------------------------------------------------------------------------
-    parseFile() {
-      return new Promise((resolve, reject) => {
-        readline.on('line', line => {
-          if(line.length === 0) {
-            model.save();
-            model.clear();
-          } else {
-            try {
-              model.parse(line);
-            } catch (e) {
-              return reject(e);
-            }
-          }
-        });
-
-        readline.on('close', () => {
-          resolve();
-        });
-      });
-    }
-  };
+  async parseFile(db) {
+    const f = compose(model.parse, fs.readFileSync)
+    return await Promise.all(f(FILEPATH, 'utf8').map(x => model.save(db, x)))
+  }
 }
-
-module.exports = AirportIndex;

@@ -67,7 +67,7 @@ const parseRunway = ([type, name, hdg, len, wid, hasIls, ils, unused, lat, lon, 
  */
 const process = ([airport, ...runways]) => parseAirport(
   airport.split(','),
-  runways.map(x => parseRunway(x.split(',')))
+  runways.map(x => parseRunway(x.split(','))).filter(x => x.name && x.hdg)
 )
 
 /**
@@ -98,7 +98,7 @@ const save = async (db, data) => {
   console.log(`Saving ${JSON.stringify(data.icao)}`);
 
   try {
-    await this.db.collection(COLLECTION).updateOne({
+    await db.collection(COLLECTION).updateOne({
       icao: data.icao
     }, {
       $set: data
