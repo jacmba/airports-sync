@@ -1,11 +1,11 @@
 {
   "name": "airports-sync",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Airports database importer",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "mocha test"
+    "test": "mocha test --ui tdd"
   },
   "repository": {
     "type": "git",

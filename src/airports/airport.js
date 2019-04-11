@@ -1,113 +1,125 @@
-'use strict';
+'use strict'
 
-const FEET = 0.3048;
-const COLLECTION = 'airports';
+/*
+ * Airport parsing logic
+ * Refactored with gorgeous functional style
+ * So exited about that
+ */
 
-let _ = require('lodash');
+const FEET = 0.3048 // 1 feet = 0.3048 meters
+const COLLECTION = 'airports' // Target database collection
+
+const _ = require('lodash')
+const { compose } = require('highland')
 
 /**
- * Airport model class
+ * Create database indexes
+ * @param {object} db - Database reference object
  */
-class Airport {
-  //----------------------------------------------------------------------------
-  /**
-   * @constructor
-   */
-  constructor(db) {
-    this.db = db;
-
-    this.clear();
-  }
-
-  //----------------------------------------------------------------------------
-  destroy() {
-    this.db.close();
-  }
-
-  //----------------------------------------------------------------------------
-  indexize() {
-    return new Promise((resolve, reject) => {
-      this.db.
-      createIndex(COLLECTION, {icao: 1}, {name: "ICAOIndex", unique: true})
-      .then(() => {
-        console.log('Name index created');
-        resolve();
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
-  }
-
-  //----------------------------------------------------------------------------
-  /**
-   * Clean airport info
-   */
-  clear() {
-    this.name = null;
-    this.icao = null;
-    this.lat = 0;
-    this.lon = 0;
-    this.elevation = 0;
-    this.ta = 0;
-    this.runways = [];
-  }
-
-  //----------------------------------------------------------------------------
-  /**
-   * Parse raw information
-   * @param {string} data - Input raw airport or runway data
-   */
-  parse(data) {
-    let info = data.split(',');
-
-    // Airport info
-    if(info[0] === 'A') {
-      console.log('Parsing airport info');
-      this.icao = info[1];
-      this.name = info[2];
-      this.lat = Number(info[3]);
-      this.lon = Number(info[4]);
-      this.elevation = Number(info[5]);
-      this.ta = Number(info[6]);
-    } else if(info[0] === 'R') {
-      console.log('Parsing runway info');
-      let rwy = {
-        name: info[1],
-        hdg: Number(info[2]),
-        length: Math.floor(Number(info[3]) * FEET),
-        width: Math.floor(Number(info[4]) * FEET),
-        ils: info[5] === '1' ? info[6] : null,
-        lat: Number(info[8]),
-        lon: Number(info[9]),
-        elevation: Number(info[10])
-      };
-
-      this.runways.push(rwy);
-    } else {
-      console.error(`Unknown data "${data}"`);
-    }
-  }
-
-  //----------------------------------------------------------------------------
-  save() {
-    let obj = _.toPlainObject(this);
-    delete obj.db;
-    console.log(`Saving ${JSON.stringify(obj.icao)}`);
-    this.db.collection(COLLECTION).updateOne({
-      icao: obj.icao
-    }, {
-      $set: obj
-    }, {
-      upsert: true
-    })
-    .then(() => {
-      console.log(`Airport ${obj.icao} saved`);
-    })
-    .catch(err => {
-      console.error(`Error saving airport ${obj.icao}: ${err}`);
-    });
+const indexize = async db => {
+  try {
+    await db.createIndex(COLLECTION, {icao: 1}, {name: "ICAOIndex", unique: true})
+    console.log('Name index created');
+  } catch (e) {
+    throw e
   }
 }
 
-module.exports = Airport;
+/**
+ * Get distance in meters
+ * @param {number} x - Distance in feet
+ */
+const getMeters = x => Math.floor(Number(x) * FEET)
+
+/**
+ * Parse airport information
+ * @param {Array} param0 - Mapped input data array 
+ * @param {Array} rwys - Array of processed runways
+ */
+const parseAirport = ([type, icao, name, lat, lon, elev, ta], rwys) => Object.freeze({
+  icao: icao,
+  name: name,
+  lat: Number(lat),
+  lon: Number(lon),
+  elevation: Number(elev),
+  ta: Number(ta),
+  runways: rwys
+})
+
+/**
+ * Parse runway information
+ * @param {Array} param0 - Mapped array of input data
+ */
+const parseRunway = ([type, name, hdg, len, wid, hasIls, ils, unused, lat, lon, elev]) => Object.freeze({
+  name: name,
+  hdg: Number(hdg),
+  length: getMeters(len),
+  width: getMeters(wid),
+  ils: hasIls === '1' ? ils : null,
+  lat: Number(lat),
+  lon: Number(lon),
+  elevation: Number(elev)
+})
+
+/**
+ * Process airport and runways information
+ * @param {Array} param0 - Mapped head/tail list (head = airport, tail = runways)
+ */
+const process = ([airport, ...runways]) => parseAirport(
+  airport.split(','),
+  runways.map(x => parseRunway(x.split(','))).filter(x => x.name && x.hdg)
+)
+
+/**
+ * Transform original text data into structured airports array
+ * This is the root of the transform breadcrum
+ * @param {string} x - Raw text file input data
+ */
+const parse = x => compose(processBlocks, splitBlocks)(x)
+
+/**
+ * Convert text data into information arrays per airport
+ * @param {string} x - Text data
+ */
+const splitBlocks = x => x.split('\n\n').map(x => x.split('\n'))
+
+/**
+ * Process separated airports arrays
+ * @param {Array} xs - Arrays of splited text data
+ */
+const processBlocks = xs => xs.map(x => process(x))
+
+/**
+ * Store airport document in database
+ * @param {object} db - Database handler
+ * @param {object} data - Airport object
+ */
+const save = async (db, data) => {
+  console.log(`Saving ${JSON.stringify(data.icao)}`);
+
+  try {
+    await db.collection(COLLECTION).updateOne({
+      icao: data.icao
+    }, {
+      $set: data
+    }, {
+      upsert: true
+    })
+    console.log(`Airport ${data.icao} saved`)
+  } catch (e) {
+    console.error(`Error saving airport ${data.icao}: ${e}`)
+  }
+}
+
+/**
+ * Airport model interface
+ */
+module.exports = { 
+  indexize,
+  parseAirport,
+  parseRunway,
+  parse,
+  splitBlocks,
+  process,
+  save
+}
