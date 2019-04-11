@@ -24,10 +24,10 @@
   "homepage": "https://github.com/jacmba/airports-sync#readme",
   "devDependencies": {
     "assert": "1.4.1",
-    "mocha": "3.4.2"
+    "mocha": "6.1.2"
   },
   "dependencies": {
-    "lodash": "4.17.4",
+    "lodash": "4.17.11",
     "mongodb": "2.2.28"
   }
 }
